@@ -73,6 +73,13 @@ Request that the webxr presentation exits VR mode
 */
 extern void webxr_request_exit();
 
+/**
+Set projection matrix parameters for the webxr session
+
+@param near Distance of near clipping plane
+@param far Distance of far clipping plane
+*/
+extern void webxr_set_projection_params(float near, float far);
 }
 
 #endif

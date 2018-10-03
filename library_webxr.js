@@ -154,5 +154,13 @@ webxr_request_exit: function() {
     }
 },
 
+webxr_set_projection_params: function(near, far) {
+    var s = Module['webxr_session'];
+    if(!s) return;
+
+    s.depthNear = near;
+    s.depthFar = far;
+},
+
 });
 
