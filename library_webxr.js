@@ -29,7 +29,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         if(!pose) return;
 
         var SIZE_OF_WEBXR_VIEW = (16 + 16 + 4)*4;
-        var views = Module._malloc(SIZE_OF_WEBXR_VIEW*2);
+        var views = Module._malloc(SIZE_OF_WEBXR_VIEW*2 + 16*4);
 
         frame.views.forEach(function(view) {
             var viewport = frame.session.baseLayer.getViewport(view);
@@ -55,13 +55,19 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
             setValue(offset + 12, viewport.height, 'i32');
         });
 
+        /* Model matrix */
+        var modelMatrix = views + SIZE_OF_WEBXR_VIEW*2;
+        for (var i = 0; i < 16; ++i) {
+            setValue(modelMatrix + i*4, pose.poseModelMatrix[i], 'float');
+        }
+
         Module.ctx.bindFramebuffer(Module.ctx.FRAMEBUFFER,
             session.baseLayer.framebuffer);
         /* HACK: This is not generally necessary, but chrome seems to detect whether the
          * page is sending frames by waiting for depth buffer clear or something */
         Module.ctx.clear(Module.ctx.DEPTH_BUFFER_BIT);
 
-        dynCall('viii', frameCallback, [userData, time, views]);
+        dynCall('viiii', frameCallback, [userData, time, modelMatrix, views]);
         _free(views);
     };
 
