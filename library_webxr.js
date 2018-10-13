@@ -155,9 +155,6 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         });
     };
 
-    var polyfill = new WebXRPolyfill();
-    var versionShim = new WebXRVersionShim();
-
     if(navigator.xr) {
         // Request an XRDevice connected to the system.
         navigator.xr.requestDevice().then(function(device) {
