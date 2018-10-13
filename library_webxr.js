@@ -21,12 +21,12 @@ $WebXR: {
     /* Sets input source values to offset and returns pointer after struct */
     _nativize_input_source: function(offset, inputSource) {
         var handedness = -1;
-        if(e.handedness == "left") handedness = 0;
-        else if(e.handedness == "right") handedness = 1;
+        if(inputSource.handedness == "left") handedness = 0;
+        else if(inputSource.handedness == "right") handedness = 1;
 
         var targetRayMode = 0;
-        if(e.targetRayMode == "tracked-pointer") targetRayMode = 1;
-        else if(e.targetRayMode == "screen") targetRayMode = 2;
+        if(inputSource.targetRayMode == "tracked-pointer") targetRayMode = 1;
+        else if(inputSource.targetRayMode == "screen") targetRayMode = 2;
 
         setValue(offset + 0, handedness, 'i32');
         setValue(offset + 4, targetRayMode, 'i32');
@@ -42,7 +42,7 @@ $WebXR: {
         s.addEventListener(event, function(e) {
             /* Nativize input source */
             var inputSource = Module._malloc(8); // 2*sizeof(int32)
-            _nativize_input_source(inputSource, e.inputSource);
+            WebXR._nativize_input_source(inputSource, e.inputSource);
 
             /* Call native callback */
             dynCall('vii', callback, [inputSource, userData]);
@@ -195,13 +195,13 @@ webxr_set_session_focus_callback: function(callback, userData) {
 },
 
 webxr_set_select_callback: function(callback, userData) {
-    _set_input_callback("select", callback, userData);
+    WebXR._set_input_callback("select", callback, userData);
 },
-webxr_set_select_callback: function(callback, userData) {
-    _set_input_callback("selectstart", callback, userData);
+webxr_set_select_start_callback: function(callback, userData) {
+    WebXR._set_input_callback("selectstart", callback, userData);
 },
-webxr_set_select_callback: function(callback, userData) {
-    _set_input_callback("selectend", callback, userData);
+webxr_set_select_end_callback: function(callback, userData) {
+    WebXR._set_input_callback("selectend", callback, userData);
 },
 
 webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
@@ -212,7 +212,7 @@ webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
     var i = 0;
     for (let inputSource of sources) {
         if(i >= max) break;
-        outArrayPtr = _nativize_input_source(outArrayPtr, inputSource);
+        outArrayPtr = WebXR._nativize_input_source(outArrayPtr, inputSource);
         ++i;
     }
     setValue(outCountPtr, i, 'i32');
