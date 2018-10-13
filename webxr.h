@@ -8,11 +8,26 @@ extern "C"
 #endif
 {
 
-/** WebXR not supported in this browser */
+/** Errors enum */
 enum WebXRError {
-    WEBXR_ERR_UNSUPPORTED=-2
+    WEBXR_ERR_UNSUPPORTED = -2, /**< WebXR not supported in this browser */
 };
 
+/** WebXR handedness */
+enum WebXRHandedness {
+    WEBXR_HANDEDNESS_NONE = -1,
+    WEBXR_HANDEDNESS_LEFT = 0,
+    WEBXR_HANDEDNESS_RIGHT = 1,
+};
+
+/** WebXR target ray mode */
+enum WebXRTargetRayMode {
+    WEBXR_TARGET_RAY_MODE_GAZE = 0,
+    WEBXR_TARGET_RAY_MODE_TRACKED_POINTER = 1,
+    WEBXR_TARGET_RAY_MODE_SCREEN = 2,
+};
+
+/** WebXR view */
 typedef struct WebXRView {
     /* view matrix */
     float viewMatrix[16];
@@ -21,6 +36,11 @@ typedef struct WebXRView {
     /* x, y, width, height of the eye viewport on target texture */
     int viewport[4];
 } WebXRView;
+
+typedef struct WebXRInputSource {
+    WebXRHandedness handedness;
+    WebXRTargetRayMode targetRayMode;
+} WebXRInputSource;
 
 /**
 Callback for errors
@@ -43,16 +63,9 @@ typedef void (*webxr_frame_callback_func)(void* userData, int time, float modelM
 /**
 Callback for VR session start
 
-@param userData User pointer passed to init_webxr()
+@param userData User pointer passed to set_session_start_callback
 */
-typedef void (*webxr_session_start_callback_func)(void* userData);
-
-/**
-Callback for VR session end
-
-@param userData User pointer passed to init_webxr()
-*/
-typedef void (*webxr_session_end_callback_func)(void* userData);
+typedef void (*webxr_session_callback_func)(void* userData);
 
 /**
 Init WebXR rendering
@@ -63,10 +76,15 @@ Init WebXR rendering
 */
 extern void webxr_init(
         webxr_frame_callback_func frameCallback,
-        webxr_session_start_callback_func sessionStartCallback,
-        webxr_session_end_callback_func sessionEndCallback,
+        webxr_session_callback_func sessionStartCallback,
+        webxr_session_callback_func sessionEndCallback,
         webxr_error_callback_func errorCallback,
         void* userData);
+
+extern void webxr_set_session_blur_callback(
+        webxr_session_callback_func sessionBlurCallback, void* userData);
+extern void webxr_set_session_focus_callback(
+        webxr_session_callback_func sessionFocusCallback, void* userData);
 
 /*
 Request that the webxr presentation exits VR mode
@@ -80,6 +98,60 @@ Set projection matrix parameters for the webxr session
 @param far Distance of far clipping plane
 */
 extern void webxr_set_projection_params(float near, float far);
+
+/**
+
+WebXR Input
+
+*/
+
+/**
+Callback for primary input action.
+
+@param userData User pointer passed to @ref webxr_set_select_callback, @ref webxr_set_select_end_callback or @ref webxr_set_select_start_callback.
+*/
+typedef void (*webxr_input_callback_func)(WebXRInputSource* inputSource, void* userData);
+
+
+/**
+Set callbacks for primary input action.
+*/
+extern void webxr_set_select_callback(
+        webxr_input_callback_func callback, void* userData);
+extern void webxr_set_select_start_callback(
+        webxr_input_callback_func callback, void* userData);
+extern void webxr_set_select_end_callback(
+        webxr_input_callback_func callback, void* userData);
+
+/**
+Get input sources.
+
+@param outArray @ref WebXRInputSource array to fill.
+@param max Size of outArray (in elements).
+@param outCount Will receive the number of input sources valid in outArray.
+*/
+extern void webxr_get_input_sources(
+        WebXRInputSource* outArray, int max, int* outCount);
+
+typedef struct WebXRRay {
+    float origin[3];
+    float direction[3];
+    float transformMatrix[16];
+} WebXRRay;
+
+typedef struct WebXRInputPose {
+    WebXRRay targetRay;
+    float gripMatrix[16];
+    bool emulatedPosition;
+} WebXRInputPose;
+
+/**
+Get input pose. Can only be called during the frame callback.
+
+@param source The source to get the pose for.
+@param outPose Where to store the pose.
+*/
+extern void webxr_get_input_pose(WebXRInputSource* source, WebXRInputPose* outPose);
 }
 
 #endif
