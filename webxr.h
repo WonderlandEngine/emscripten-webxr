@@ -1,7 +1,9 @@
 #ifndef WEBXR_H_
 #define WEBXR_H_
 
-/* Super minimal WebXR device API wrapper */
+/** @file
+ * @brief Minimal WebXR Device API wrapper
+ */
 
 #ifdef __cplusplus
 extern "C"
