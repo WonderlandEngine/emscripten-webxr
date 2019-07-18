@@ -24,5 +24,5 @@ else()
     # Also, note that there is no whitespace prefix as in the above.
     set_property(TARGET webxr APPEND_STRING PROPERTY
         INTERFACE_LINK_LIBRARIES
-            --js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js)
+            "--js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js")
 endif()
