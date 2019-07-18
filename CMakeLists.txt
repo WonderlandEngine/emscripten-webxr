@@ -14,7 +14,11 @@ target_include_directories(webxr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # "link" the webxr javascript library when linking to webxr
 # Next release of CMake will contain "INTERFACE_LINK_OPTIONS"!
-if(NOT CMAKE_VERSION VERSION_LESS 3.12.0)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13.0)
+    target_link_options(webxr PUBLIC
+        "SHELL:--js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js")
+
+elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 3.12.0)
     set_property(TARGET webxr APPEND_STRING PROPERTY
         INTERFACE_LINK_OPTIONS
             " --js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js")
