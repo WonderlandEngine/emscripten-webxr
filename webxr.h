@@ -89,6 +89,11 @@ extern void webxr_set_session_focus_callback(
         webxr_session_callback_func sessionFocusCallback, void* userData);
 
 /*
+Request session presentation start
+*/
+extern void webxr_request_session();
+
+/*
 Request that the webxr presentation exits VR mode
 */
 extern void webxr_request_exit();

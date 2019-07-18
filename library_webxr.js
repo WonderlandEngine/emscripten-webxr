@@ -159,7 +159,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         // Request an XRDevice connected to the system.
         navigator.xr.requestDevice().then(function(device) {
             device.supportsSession({immersive: true}).then(function() {
-                Module['webxr_request_session'] = function() {
+                Module['webxr_request_session_func'] = function() {
                     device.requestSession({immersive: true}).then(onSessionStarted);
                 };
             });
@@ -168,6 +168,11 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         /* Call error callback with "WebXR not supported" */
         onError(-2);
     }
+},
+
+webxr_request_session: function() {
+    var s = Module['webxr_request_session_func'];
+    if(s) Module['webxr_request_session_func']();
 },
 
 webxr_request_exit: function() {
@@ -215,7 +220,7 @@ webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
     setValue(outCountPtr, i, 'i32');
 },
 
-webxr_get_input_sources: function(source, outPosePtr) {
+webxr_get_input_pose: function(source, outPosePtr) {
     var f = Module['webxr_frame'];
     if(!f) return; // TODO(squareys) warning or return error
 
