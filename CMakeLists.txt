@@ -17,12 +17,12 @@ target_include_directories(webxr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(NOT CMAKE_VERSION VERSION_LESS 3.12.0)
     set_property(TARGET webxr APPEND_STRING PROPERTY
         INTERFACE_LINK_OPTIONS
-            --js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js)
+            " --js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js")
 else()
     # *UGLY HACK* to get --js-library into the link parameters. May only work if webxr
     # target is linked last, so be aware of that or use cmake >= 3.12.0
     # Also, note that there is no whitespace prefix as in the above.
     set_property(TARGET webxr APPEND_STRING PROPERTY
         INTERFACE_LINK_LIBRARIES
-            "--js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js")
+            " --js-library ${CMAKE_CURRENT_SOURCE_DIR}/library_webxr.js")
 endif()
