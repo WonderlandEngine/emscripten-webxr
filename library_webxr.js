@@ -130,7 +130,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
     function onSessionStarted(session) {
         Module['webxr_session'] = session;
 
-        // Change button on session end
+        // React to session ending
         session.addEventListener('end', function() {
             Module['webxr_session'] = null;
             onSessionEnd();
@@ -140,29 +140,28 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         // e.g. finish current desktop frame.
         onSessionStart();
 
-        // Set the compatible XR device for existing GL context
-        Module.ctx.setCompatibleXRDevice(session.device).then(function() {
-            session.baseLayer = new XRWebGLLayer(session, Module.ctx);
-
-            // Get a frame of reference, which is required for querying poses. In
-            // this case an 'eye-level' frame of reference means that all poses will
-            // be relative to the location where the XRDevice was first detected.
-            session.requestFrameOfReference('eye-level').then(function(frameOfRef) {
-                WebXR._coordinateSystem = frameOfRef;
-                // Inform the session that we're ready to begin drawing.
-                session.requestAnimationFrame(onFrame);
+        // Ensure our context can handle WebXR rendering
+        Module.ctx.makeXRCompatible().then(function() {
+            // Create the base layer
+            session.updateRenderState({
+                baseLayer: new XRWebGLLayer(session, Module.ctx)
             });
+
+            // Start rendering
+            session.requestAnimationFrame(onFrame);
+        }, function(err) {
+            onError(-3);
         });
     };
 
     if(navigator.xr) {
-        // Request an XRDevice connected to the system.
-        navigator.xr.requestDevice().then(function(device) {
-            device.supportsSession({immersive: true}).then(function() {
-                Module['webxr_request_session_func'] = function() {
-                    device.requestSession({immersive: true}).then(onSessionStarted);
-                };
-            });
+        // Check if XR session is supported
+        navigator.xr.supportsSession('immersive-vr').then(function() {
+            Module['webxr_request_session_func'] = function() {
+                navigator.xr.requestSession('immersive-vr').then(onSessionStarted);
+            };
+        }, function() {
+            onError(-4);
         });
     } else {
         /* Call error callback with "WebXR not supported" */

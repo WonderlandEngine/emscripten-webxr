@@ -12,7 +12,9 @@ extern "C"
 
 /** Errors enum */
 enum WebXRError {
-    WEBXR_ERR_UNSUPPORTED = -2, /**< WebXR not supported in this browser */
+    WEBXR_ERR_UNSUPPORTED = -2, /**< WebXR Device API not supported in this browser */
+    WEBXR_ERR_GL_INCAPABLE = -3, /**< GL context cannot render WebXR */
+    WEBXR_ERR_NO_VR = -4, /**< 'immersive-vr' sessions are not supported */
 };
 
 /** WebXR handedness */
@@ -90,6 +92,8 @@ extern void webxr_set_session_focus_callback(
 
 /*
 Request session presentation start
+
+Needs to be called from a [user activation event](https://html.spec.whatwg.org/multipage/interaction.html#triggered-by-user-activation).
 */
 extern void webxr_request_session();
 
