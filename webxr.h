@@ -49,6 +49,7 @@ typedef struct WebXRView {
 } WebXRView;
 
 typedef struct WebXRInputSource {
+    int id;
     WebXRHandedness handedness;
     WebXRTargetRayMode targetRayMode;
 } WebXRInputSource;
@@ -155,25 +156,14 @@ Get input sources.
 extern void webxr_get_input_sources(
         WebXRInputSource* outArray, int max, int* outCount);
 
-typedef struct WebXRRay {
-    float origin[3];
-    float direction[3];
-    float transformMatrix[16];
-} WebXRRay;
-
-typedef struct WebXRInputPose {
-    WebXRRay targetRay;
-    float gripMatrix[16];
-    bool emulatedPosition;
-} WebXRInputPose;
-
 /**
 Get input pose. Can only be called during the frame callback.
 
 @param source The source to get the pose for.
 @param outPose Where to store the pose.
 */
-extern void webxr_get_input_pose(WebXRInputSource* source, WebXRInputPose* outPose);
+extern void webxr_get_input_pose(WebXRInputSource* source, float* outMatrix);
+
 }
 
 #endif

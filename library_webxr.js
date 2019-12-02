@@ -2,6 +2,7 @@ var LibraryWebXR = {
 
 $WebXR: {
     _coordinateSystem: null,
+    _curRAF: null,
 
     _nativize_vec3: function(offset, vec) {
         setValue(offset + 0, vec[0], 'float');
@@ -19,7 +20,7 @@ $WebXR: {
         return offset + 16*4;
     },
     /* Sets input source values to offset and returns pointer after struct */
-    _nativize_input_source: function(offset, inputSource) {
+    _nativize_input_source: function(offset, inputSource, id) {
         var handedness = -1;
         if(inputSource.handedness == "left") handedness = 0;
         else if(inputSource.handedness == "right") handedness = 1;
@@ -28,10 +29,14 @@ $WebXR: {
         if(inputSource.targetRayMode == "tracked-pointer") targetRayMode = 1;
         else if(inputSource.targetRayMode == "screen") targetRayMode = 2;
 
-        setValue(offset + 0, handedness, 'i32');
-        setValue(offset + 4, targetRayMode, 'i32');
+        setValue(offset, id, 'i32');
+        offset +=4;
+        setValue(offset, handedness, 'i32');
+        offset +=4;
+        setValue(offset, targetRayMode, 'i32');
+        offset +=4;
 
-        return offset + 8;
+        return offset;
     },
 
     _set_input_callback: function(event, callback, userData) {
@@ -42,7 +47,7 @@ $WebXR: {
         s.addEventListener(event, function(e) {
             /* Nativize input source */
             var inputSource = Module._malloc(8); // 2*sizeof(int32)
-            WebXR._nativize_input_source(inputSource, e.inputSource);
+            WebXR._nativize_input_source(inputSource, e.inputSource, i);
 
             /* Call native callback */
             dynCall('vii', callback, [inputSource, userData]);
@@ -68,7 +73,7 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
         dynCall('vii', errorCallback, [userData, errorCode]);
     };
 
-    function onSessionEnd() {
+    function onSessionEnd(session) {
         if(!endSessionCallback) return;
         dynCall('vi', endSessionCallback, [userData]);
     };
@@ -80,29 +85,10 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
 
     function onFrame(time, frame) {
         if(!frameCallback) return;
-        const session = frame.session;
-
-        for (let inputSource of session.inputSources) {
-            let targetRayPose = frame.getPose(inputSource.targetRaySpace, WebXR._coordinateSystem);
-            if (!targetRayPose) {
-                // Tracking lost
-                continue;
-            }
-
-            inputPose.targetRay.transformMatrix;
-            if (inputSource.gripSpace) {
-                let gripPose = frame.getPose(inputSource.gripSpace, WebXR._coordinateSystem);
-                if (gripPose) {
-                    // If we have a grip pose use it to render a mesh showing the
-                    // position of the controller.
-                    scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
-                }
-            }
-
-        }
-
         /* Request next frame */
-        session.requestAnimationFrame(onFrame);
+        const session = frame.session;
+        /* RAF is set to null on session end to avoid rendering */
+        if(Module['webxr_session'] != null) session.requestAnimationFrame(onFrame);
 
         const pose = frame.getViewerPose(WebXR._coordinateSystem);
         if(!pose) return;
@@ -110,18 +96,15 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
         const SIZE_OF_WEBXR_VIEW = (16 + 16 + 4)*4;
         const views = Module._malloc(SIZE_OF_WEBXR_VIEW*2 + 16*4);
 
+        const glLayer = session.renderState.baseLayer;
         pose.views.forEach(function(view) {
-            const viewport = frame.session.baseLayer.getViewport(view);
-            const viewMatrix = pose.getViewMatrix(view);
+            const viewport = glLayer.getViewport(view);
+            const viewMatrix = view.transform.inverse.matrix;
             let offset = views + SIZE_OF_WEBXR_VIEW*(view.eye == 'left' ? 0 : 1);
 
-            // viewMatrix
             offset = WebXR._nativize_matrix(offset, viewMatrix);
-
-            // projectionMatrix
             offset = WebXR._nativize_matrix(offset, view.projectionMatrix);
 
-            // viewport
             setValue(offset + 0, viewport.x, 'i32');
             setValue(offset + 4, viewport.y, 'i32');
             setValue(offset + 8, viewport.width, 'i32');
@@ -130,10 +113,10 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
 
         /* Model matrix */
         const modelMatrix = views + SIZE_OF_WEBXR_VIEW*2;
-        WebXR._nativize_matrix(modelMatrix, pose.poseModelMatrix);
+        WebXR._nativize_matrix(modelMatrix, pose.transform.matrix);
 
         Module.ctx.bindFramebuffer(Module.ctx.FRAMEBUFFER,
-            session.baseLayer.framebuffer);
+            glLayer.framebuffer);
         /* HACK: This is not generally necessary, but chrome seems to detect whether the
          * page is sending frames by waiting for depth buffer clear or something */
         // TODO still necessary?
@@ -152,6 +135,8 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
 
         // React to session ending
         session.addEventListener('end', function() {
+            Module['webxr_session'].cancelAnimationFrame(WebXR._curRAF);
+            WebXR._curRAF = null;
             Module['webxr_session'] = null;
             onSessionEnd();
         });
@@ -232,11 +217,10 @@ webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
     var s = Module['webxr_session'];
     if(!s) return; // TODO(squareys) warning or return error
 
-    var sources = s.getInputSources();
     var i = 0;
-    for (let inputSource of sources) {
+    for (let inputSource of s.inputSources) {
         if(i >= max) break;
-        outArrayPtr = WebXR._nativize_input_source(outArrayPtr, inputSource);
+        outArrayPtr = WebXR._nativize_input_source(outArrayPtr, inputSource, i);
         ++i;
     }
     setValue(outCountPtr, i, 'i32');
@@ -244,19 +228,23 @@ webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
 
 webxr_get_input_pose: function(source, outPosePtr) {
     var f = Module['webxr_frame'];
-    if(!f) return; // TODO(squareys) warning or return error
+    if(!f) {
+        console.warn("Cannot call webxr_get_input_pose outside of frame callback");
+        return;
+    }
 
-    pose = f.getInputPose(source, WebXR._coordinateSystem);
+    const id = getValue(source, 'i32');
+    const input = Module['webxr_session'].inputSources[id];
+
+    pose = f.getPose(input.gripSpace, WebXR._coordinateSystem);
 
     offset = outPosePtr;
     /* WebXRRay */
-    offset = WebXR._nativize_vec3(offset, pose.targetRay.origin);
-    offset = WebXR._nativize_vec3(offset, pose.targetRay.direction);
-    offset = WebXR._nativize_matrix(offset, pose.targetRay.transformMatrix);
+    offset = WebXR._nativize_matrix(offset, pose.transform.matrix);
 
     /* WebXRInputPose */
-    offset = WebXR._nativize_matrix(offset, pose.gripMatrix);
-    setValue(offset, pose.emulatedPosition, 'i32');
+    //offset = WebXR._nativize_matrix(offset, pose.gripMatrix);
+    //setValue(offset, pose.emulatedPosition, 'i32');
 },
 
 };
