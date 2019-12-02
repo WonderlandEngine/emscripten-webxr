@@ -62,7 +62,7 @@ $WebXR: {
     }
 },
 
-webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, errorCallback, userData) {
+webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallback, errorCallback, userData) {
     function onError(errorCode) {
         if(!errorCallback) return;
         dynCall('vii', errorCallback, [userData, errorCode]);
@@ -80,21 +80,40 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
 
     function onFrame(time, frame) {
         if(!frameCallback) return;
-        var session = frame.session;
+        const session = frame.session;
+
+        for (let inputSource of session.inputSources) {
+            let targetRayPose = frame.getPose(inputSource.targetRaySpace, WebXR._coordinateSystem);
+            if (!targetRayPose) {
+                // Tracking lost
+                continue;
+            }
+
+            inputPose.targetRay.transformMatrix;
+            if (inputSource.gripSpace) {
+                let gripPose = frame.getPose(inputSource.gripSpace, WebXR._coordinateSystem);
+                if (gripPose) {
+                    // If we have a grip pose use it to render a mesh showing the
+                    // position of the controller.
+                    scene.inputRenderer.addController(gripPose.transform.matrix, inputSource.handedness);
+                }
+            }
+
+        }
 
         /* Request next frame */
         session.requestAnimationFrame(onFrame);
 
-        var pose = frame.getDevicePose(WebXR._coordinateSystem);
+        const pose = frame.getViewerPose(WebXR._coordinateSystem);
         if(!pose) return;
 
-        var SIZE_OF_WEBXR_VIEW = (16 + 16 + 4)*4;
-        var views = Module._malloc(SIZE_OF_WEBXR_VIEW*2 + 16*4);
+        const SIZE_OF_WEBXR_VIEW = (16 + 16 + 4)*4;
+        const views = Module._malloc(SIZE_OF_WEBXR_VIEW*2 + 16*4);
 
-        frame.views.forEach(function(view) {
-            var viewport = frame.session.baseLayer.getViewport(view);
-            var viewMatrix = pose.getViewMatrix(view);
-            var offset = views + SIZE_OF_WEBXR_VIEW*(view.eye == 'left' ? 0 : 1);
+        pose.views.forEach(function(view) {
+            const viewport = frame.session.baseLayer.getViewport(view);
+            const viewMatrix = pose.getViewMatrix(view);
+            let offset = views + SIZE_OF_WEBXR_VIEW*(view.eye == 'left' ? 0 : 1);
 
             // viewMatrix
             offset = WebXR._nativize_matrix(offset, viewMatrix);
@@ -110,13 +129,14 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         });
 
         /* Model matrix */
-        var modelMatrix = views + SIZE_OF_WEBXR_VIEW*2;
+        const modelMatrix = views + SIZE_OF_WEBXR_VIEW*2;
         WebXR._nativize_matrix(modelMatrix, pose.poseModelMatrix);
 
         Module.ctx.bindFramebuffer(Module.ctx.FRAMEBUFFER,
             session.baseLayer.framebuffer);
         /* HACK: This is not generally necessary, but chrome seems to detect whether the
          * page is sending frames by waiting for depth buffer clear or something */
+        // TODO still necessary?
         Module.ctx.clear(Module.ctx.DEPTH_BUFFER_BIT);
 
         /* Set and reset environment for webxr_get_input_pose calls */
@@ -147,8 +167,11 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
                 baseLayer: new XRWebGLLayer(session, Module.ctx)
             });
 
-            // Start rendering
-            session.requestAnimationFrame(onFrame);
+            session.requestReferenceSpace('local').then(refSpace => {
+                WebXR._coordinateSystem = refSpace;
+                // Start rendering
+                session.requestAnimationFrame(onFrame);
+            });
         }, function(err) {
             onError(-3);
         });
@@ -156,7 +179,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
 
     if(navigator.xr) {
         // Check if XR session is supported
-        navigator.xr.supportsSession('immersive-vr').then(function() {
+        navigator.xr.isSessionSupported((['inline', 'immersive-vr', 'immersive-ar'])[mode]).then(function() {
             Module['webxr_request_session_func'] = function() {
                 navigator.xr.requestSession('immersive-vr').then(onSessionStarted);
             };

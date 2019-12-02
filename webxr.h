@@ -12,9 +12,9 @@ extern "C"
 
 /** Errors enum */
 enum WebXRError {
-    WEBXR_ERR_UNSUPPORTED = -2, /**< WebXR Device API not supported in this browser */
+    WEBXR_ERR_API_UNSUPPORTED = -2, /**< WebXR Device API not supported in this browser */
     WEBXR_ERR_GL_INCAPABLE = -3, /**< GL context cannot render WebXR */
-    WEBXR_ERR_NO_VR = -4, /**< 'immersive-vr' sessions are not supported */
+    WEBXR_ERR_SESSION_UNSUPPORTED = -4, /**< given session mode not supported */
 };
 
 /** WebXR handedness */
@@ -29,6 +29,13 @@ enum WebXRTargetRayMode {
     WEBXR_TARGET_RAY_MODE_GAZE = 0,
     WEBXR_TARGET_RAY_MODE_TRACKED_POINTER = 1,
     WEBXR_TARGET_RAY_MODE_SCREEN = 2,
+};
+
+/** WebXR 'XRSessionMode' enum*/
+enum WebXRSessionMode {
+    WEBXR_SESSION_MODE_INLINE = 0, /** "inline" */
+    WEBXR_SESSION_MODE_IMMERSIVE_VR = 1, /** "immersive-vr" */
+    WEBXR_SESSION_MODE_IMMERSIVE_AR = 2, /** "immersive-ar" */
 };
 
 /** WebXR view */
@@ -74,11 +81,15 @@ typedef void (*webxr_session_callback_func)(void* userData);
 /**
 Init WebXR rendering
 
+@param mode Session mode from @ref WebXRSessionMode.
 @param frameCallback Callback called every frame
+@param sessionStartCallback Callback called when session is started
+@param sessionEndCallback Callback called when session ended
 @param errorCallback Callback called every frame
 @param userData User data passed to the callbacks
 */
 extern void webxr_init(
+        WebXRSessionMode mode,
         webxr_frame_callback_func frameCallback,
         webxr_session_callback_func sessionStartCallback,
         webxr_session_callback_func sessionEndCallback,
