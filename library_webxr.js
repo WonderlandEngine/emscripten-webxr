@@ -120,7 +120,7 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
         /* HACK: This is not generally necessary, but chrome seems to detect whether the
          * page is sending frames by waiting for depth buffer clear or something */
         // TODO still necessary?
-        Module.ctx.clear(Module.ctx.DEPTH_BUFFER_BIT);
+        Module.ctx.clear(Module.ctx.COLOR_BUFFER_BIT|Module.ctx.DEPTH_BUFFER_BIT);
 
         /* Set and reset environment for webxr_get_input_pose calls */
         Module['webxr_frame'] = frame;
