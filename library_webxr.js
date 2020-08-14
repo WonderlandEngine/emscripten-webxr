@@ -238,6 +238,8 @@ webxr_get_input_pose: function(source, outPosePtr) {
 
     pose = f.getPose(input.gripSpace, WebXR._coordinateSystem);
 
+    if(!pose || Number.isNaN(pose.transform.matrix[0])) return false;
+
     offset = outPosePtr;
     /* WebXRRay */
     offset = WebXR._nativize_matrix(offset, pose.transform.matrix);
@@ -245,6 +247,8 @@ webxr_get_input_pose: function(source, outPosePtr) {
     /* WebXRInputPose */
     //offset = WebXR._nativize_matrix(offset, pose.gripMatrix);
     //setValue(offset, pose.emulatedPosition, 'i32');
+    //
+    return true;
 },
 
 };

@@ -161,8 +161,9 @@ Get input pose. Can only be called during the frame callback.
 
 @param source The source to get the pose for.
 @param outPose Where to store the pose.
+@returns `false` if updating the pose failed, `true` otherwise.
 */
-extern void webxr_get_input_pose(WebXRInputSource* source, float* outMatrix);
+extern int webxr_get_input_pose(WebXRInputSource* source, float* outMatrix);
 
 }
 
