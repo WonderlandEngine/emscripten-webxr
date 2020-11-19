@@ -67,7 +67,7 @@ $WebXR: {
     }
 },
 
-webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallback, errorCallback, userData) {
+webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, errorCallback, userData) {
     function onError(errorCode) {
         if(!errorCallback) return;
         dynCall('vii', errorCallback, [userData, errorCode]);
@@ -163,23 +163,49 @@ webxr_init: function(mode, frameCallback, startSessionCallback, endSessionCallba
     };
 
     if(navigator.xr) {
-        // Check if XR session is supported
-        navigator.xr.isSessionSupported((['inline', 'immersive-vr', 'immersive-ar'])[mode]).then(function() {
-            Module['webxr_request_session_func'] = function() {
-                navigator.xr.requestSession('immersive-vr').then(onSessionStarted);
+        Module['webxr_request_session_func'] = function(mode, requiredFeatures, optionalFeatures) {
+            if(typeof(mode) !== 'string') {
+                mode = (['inline', 'immersive-vr', 'immersive-ar'])[mode];
+            }
+
+            let toFeatureList = function(bitMask) {
+                const f = [];
+                const features = ['local', 'local-floor', 'bounded-floor', 'unbounded', 'hit-test'];
+                for(let i = 0; i < features.length; ++i) {
+                    if((bitMask & (1 << i)) != 0) {
+                        f.push(features[i]);
+                    }
+                }
+                return features;
             };
-        }, function() {
-            onError(-4);
-        });
+            if(typeof(requiredFeatures) === 'number') {
+                requiredFeatures = toFeatureList(requiredFeatures);
+            }
+            if(typeof(optionalFeatures) === 'number') {
+                optionalFeatures = toFeatureList(optionalFeatures);
+            }
+            navigator.xr.requestSession(mode, {
+                requiredFeatures: requiredFeatures,
+                optionalFeatures: optionalFeatures
+            }).then(onSessionStarted);
+        };
     } else {
         /* Call error callback with "WebXR not supported" */
         onError(-2);
     }
 },
 
-webxr_request_session: function() {
+webxr_is_session_supported: function(mode, callback) {
+    navigator.xr.isSessionSupported((['inline', 'immersive-vr', 'immersive-ar'])[mode]).then(function() {
+        dynCall('vii', callback, [mode, 1]);
+    }, function() {
+        dynCall('vii', callback, [mode, 0]);
+    });
+},
+
+webxr_request_session: function(mode) {
     var s = Module['webxr_request_session_func'];
-    if(s) Module['webxr_request_session_func']();
+    if(s) s(mode);
 },
 
 webxr_request_exit: function() {
@@ -236,7 +262,7 @@ webxr_get_input_pose: function(source, outPosePtr) {
     const id = getValue(source, 'i32');
     const input = Module['webxr_session'].inputSources[id];
 
-    pose = f.getPose(input.gripSpace, WebXR._coordinateSystem);
+    pose = f.getPose(input.gripSpace || input.targetRaySpace, WebXR._coordinateSystem);
 
     if(!pose || Number.isNaN(pose.transform.matrix[0])) return false;
 
@@ -244,10 +270,6 @@ webxr_get_input_pose: function(source, outPosePtr) {
     /* WebXRRay */
     offset = WebXR._nativize_matrix(offset, pose.transform.matrix);
 
-    /* WebXRInputPose */
-    //offset = WebXR._nativize_matrix(offset, pose.gripMatrix);
-    //setValue(offset, pose.emulatedPosition, 'i32');
-    //
     return true;
 },
 

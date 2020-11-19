@@ -38,6 +38,15 @@ enum WebXRSessionMode {
     WEBXR_SESSION_MODE_IMMERSIVE_AR = 2, /** "immersive-ar" */
 };
 
+/** WebXR 'XRSessionMode' enum*/
+enum WebXRSessionFeatures {
+    WEBXR_SESSION_FEATURE_LOCAL = 0, /** "local" */
+    WEBXR_SESSION_FEATURE_LOCAL_FLOOR = 1, /** "local-floor" */
+    WEBXR_SESSION_FEATURE_BOUNDED_FLOOR = 2, /** "bounded-floor" */
+    WEBXR_SESSION_FEATURE_UNBOUNDED = 3, /** "unbounded" */
+    WEBXR_SESSION_FEATURE_HIT_TEST = 4, /** "hit-test" */
+};
+
 /** WebXR view */
 typedef struct WebXRView {
     /* view matrix */
@@ -80,9 +89,17 @@ Callback for VR session start
 typedef void (*webxr_session_callback_func)(void* userData);
 
 /**
+Callback for @ref webxr_is_session_supported
+
+@param mode The session mode that was requested
+@param supported Whether given mode is supported by this device
+*/
+typedef void (*webxr_session_supported_callback_func)(int mode, int supported);
+
+
+/**
 Init WebXR rendering
 
-@param mode Session mode from @ref WebXRSessionMode.
 @param frameCallback Callback called every frame
 @param sessionStartCallback Callback called when session is started
 @param sessionEndCallback Callback called when session ended
@@ -90,7 +107,6 @@ Init WebXR rendering
 @param userData User data passed to the callbacks
 */
 extern void webxr_init(
-        WebXRSessionMode mode,
         webxr_frame_callback_func frameCallback,
         webxr_session_callback_func sessionStartCallback,
         webxr_session_callback_func sessionEndCallback,
@@ -102,12 +118,28 @@ extern void webxr_set_session_blur_callback(
 extern void webxr_set_session_focus_callback(
         webxr_session_callback_func sessionFocusCallback, void* userData);
 
+
+/*
+Test if session mode is supported
+
+@param mode Session mode to test
+@param supportedCallback Callback which will be called once the
+        result has become available
+*/
+extern void webxr_is_session_supported(WebXRSessionMode mode,
+        webxr_session_supported_callback_func supportedCallback);
 /*
 Request session presentation start
 
+@param mode Session mode from @ref WebXRSessionMode.
+@param requiredFeatures Required session features from @ref WebXRSessionFeatures
+@param optionalFeatures Required session features from @ref WebXRSessionFeatures
+
 Needs to be called from a [user activation event](https://html.spec.whatwg.org/multipage/interaction.html#triggered-by-user-activation).
 */
-extern void webxr_request_session();
+extern void webxr_request_session(WebXRSessionMode mode,
+    WebXRSessionFeatures requiredFeatures,
+    WebXRSessionFeatures optionalFeatures);
 
 /*
 Request that the webxr presentation exits VR mode
