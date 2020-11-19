@@ -5,11 +5,18 @@ $WebXR: {
     _curRAF: null,
 
     _nativize_vec3: function(offset, vec) {
-        setValue(offset + 0, vec[0], 'float');
-        setValue(offset + 4, vec[1], 'float');
-        setValue(offset + 8, vec[2], 'float');
+        setValue(offset + 0, vec.x, 'float');
+        setValue(offset + 4, vec.y, 'float');
+        setValue(offset + 8, vec.z, 'float');
 
         return offset + 12;
+    },
+
+    _nativize_vec4: function(offset, vec) {
+        WebXR._nativize_vec3(offset, vec);
+        setValue(offset + 12, vec.w, 'float');
+
+        return offset + 16;
     },
 
     _nativize_matrix: function(offset, mat) {
@@ -19,6 +26,15 @@ $WebXR: {
 
         return offset + 16*4;
     },
+
+    _nativize_rigid_transform: function(offset, t) {
+        offset = WebXR._nativize_matrix(offset, t.matrix);
+        offset = WebXR._nativize_vec3(offset, t.position);
+        offset = WebXR._nativize_vec4(offset, t.orientation);
+
+        return offset;
+    },
+
     /* Sets input source values to offset and returns pointer after struct */
     _nativize_input_source: function(offset, inputSource, id) {
         var handedness = -1;
@@ -46,7 +62,7 @@ $WebXR: {
 
         s.addEventListener(event, function(e) {
             /* Nativize input source */
-            var inputSource = Module._malloc(8); // 2*sizeof(int32)
+            var inputSource = Module._malloc(8); /* 2*sizeof(int32) */
             WebXR._nativize_input_source(inputSource, e.inputSource, i);
 
             /* Call native callback */
@@ -73,15 +89,20 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         dynCall('vii', errorCallback, [userData, errorCode]);
     };
 
-    function onSessionEnd(session) {
+    function onSessionEnd(mode) {
         if(!endSessionCallback) return;
-        dynCall('vi', endSessionCallback, [userData]);
+        mode = {'inline': 0, 'immersive-vr': 1, 'immersive-ar': 2}[mode];
+        dynCall('vii', endSessionCallback, [userData, mode]);
     };
 
-    function onSessionStart() {
+    function onSessionStart(mode) {
         if(!startSessionCallback) return;
-        dynCall('vi', startSessionCallback, [userData]);
+        mode = {'inline': 0, 'immersive-vr': 1, 'immersive-ar': 2}[mode];
+        dynCall('vii', startSessionCallback, [userData, mode]);
     };
+
+    const SIZE_OF_WEBXR_VIEW = (16 + 3 + 4 + 16 + 4)*4;
+    const views = Module._malloc(SIZE_OF_WEBXR_VIEW*2 + (16 + 4 + 3)*4);
 
     function onFrame(time, frame) {
         if(!frameCallback) return;
@@ -93,16 +114,11 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         const pose = frame.getViewerPose(WebXR._coordinateSystem);
         if(!pose) return;
 
-        const SIZE_OF_WEBXR_VIEW = (16 + 16 + 4)*4;
-        const views = Module._malloc(SIZE_OF_WEBXR_VIEW*2 + 16*4);
-
         const glLayer = session.renderState.baseLayer;
         pose.views.forEach(function(view) {
             const viewport = glLayer.getViewport(view);
-            const viewMatrix = view.transform.inverse.matrix;
             let offset = views + SIZE_OF_WEBXR_VIEW*(view.eye == 'left' ? 0 : 1);
-
-            offset = WebXR._nativize_matrix(offset, viewMatrix);
+            offset = WebXR._nativize_rigid_transform(offset, view.transform);
             offset = WebXR._nativize_matrix(offset, view.projectionMatrix);
 
             setValue(offset + 0, viewport.x, 'i32');
@@ -124,13 +140,11 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
 
         /* Set and reset environment for webxr_get_input_pose calls */
         Module['webxr_frame'] = frame;
-        dynCall('viiii', frameCallback, [userData, time, modelMatrix, views, pose.views.length]);
+        dynCall('viiiii', frameCallback, [userData, time, modelMatrix, views, pose.views.length]);
         Module['webxr_frame'] = null;
-
-        _free(views);
     };
 
-    function onSessionStarted(session) {
+    function onSessionStarted(session, mode) {
         Module['webxr_session'] = session;
 
         // React to session ending
@@ -138,12 +152,12 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
             Module['webxr_session'].cancelAnimationFrame(WebXR._curRAF);
             WebXR._curRAF = null;
             Module['webxr_session'] = null;
-            onSessionEnd();
+            onSessionEnd(mode);
         });
 
         // Give application a chance to react to session starting
         // e.g. finish current desktop frame.
-        onSessionStart();
+        onSessionStart(mode);
 
         // Ensure our context can handle WebXR rendering
         Module.ctx.makeXRCompatible().then(function() {
@@ -187,7 +201,9 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
             navigator.xr.requestSession(mode, {
                 requiredFeatures: requiredFeatures,
                 optionalFeatures: optionalFeatures
-            }).then(onSessionStarted);
+            }).then(function(s) {
+                onSessionStarted(s, mode);
+            }).catch(console.error);
         };
     } else {
         /* Call error callback with "WebXR not supported" */
@@ -266,9 +282,7 @@ webxr_get_input_pose: function(source, outPosePtr) {
 
     if(!pose || Number.isNaN(pose.transform.matrix[0])) return false;
 
-    offset = outPosePtr;
-    /* WebXRRay */
-    offset = WebXR._nativize_matrix(offset, pose.transform.matrix);
+    WebXR._nativize_rigid_transform(outPosePtr, pose.transform);
 
     return true;
 },

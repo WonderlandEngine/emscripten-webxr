@@ -47,10 +47,17 @@ enum WebXRSessionFeatures {
     WEBXR_SESSION_FEATURE_HIT_TEST = 4, /** "hit-test" */
 };
 
+/** WebXR rigid transform */
+typedef struct WebXRRigidTransform {
+    float matrix[16];
+    float position[3];
+    float orientation[4];
+} WebXRRigidTransform;
+
 /** WebXR view */
 typedef struct WebXRView {
-    /* view matrix */
-    float viewMatrix[16];
+    /* view pose */
+    WebXRRigidTransform viewPose;
     /* projection matrix */
     float projectionMatrix[16];
     /* x, y, width, height of the eye viewport on target texture */
@@ -80,14 +87,15 @@ Callback for frame rendering
 @param views Array of `viewCount` @ref WebXRView "webxr views"
 @param viewCount Size of `views`
 */
-typedef void (*webxr_frame_callback_func)(void* userData, int time, float modelMatrix[16], WebXRView views[2], int viewCount);
+typedef void (*webxr_frame_callback_func)(void* userData, int time, WebXRRigidTransform* headPose, WebXRView views[2], int viewCount);
 
 /**
 Callback for VR session start
 
 @param userData User pointer passed to set_session_start_callback
+@param mode The session mode
 */
-typedef void (*webxr_session_callback_func)(void* userData);
+typedef void (*webxr_session_callback_func)(void* userData, int mode);
 
 /**
 Callback for @ref webxr_is_session_supported
@@ -196,7 +204,7 @@ Get input pose. Can only be called during the frame callback.
 @param outPose Where to store the pose.
 @returns `false` if updating the pose failed, `true` otherwise.
 */
-extern int webxr_get_input_pose(WebXRInputSource* source, float* outMatrix);
+extern int webxr_get_input_pose(WebXRInputSource* source, WebXRRigidTransform* outPose);
 
 }
 
