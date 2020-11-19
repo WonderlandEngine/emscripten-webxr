@@ -77,9 +77,10 @@ Callback for frame rendering
 @param userData User pointer passed to init_webxr()
 @param time Current frame time
 @param modelMatrix Transformation of the XR Device to tracking origin
-@param views Array of two @ref WebXRView
+@param views Array of `viewCount` @ref WebXRView "webxr views"
+@param viewCount Size of `views`
 */
-typedef void (*webxr_frame_callback_func)(void* userData, int time, float modelMatrix[16], WebXRView views[2]);
+typedef void (*webxr_frame_callback_func)(void* userData, int time, float modelMatrix[16], WebXRView views[2], int viewCount);
 
 /**
 Callback for VR session start
