@@ -212,6 +212,11 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
 },
 
 webxr_is_session_supported: function(mode, callback) {
+    if(!navigator.xr) {
+        /* WebXR not supported at all */
+        dynCall('vii', callback, [mode, 0]);
+        return;
+    }
     navigator.xr.isSessionSupported((['inline', 'immersive-vr', 'immersive-ar'])[mode]).then(function() {
         dynCall('vii', callback, [mode, 1]);
     }, function() {
