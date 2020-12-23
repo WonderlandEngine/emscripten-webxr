@@ -47,6 +47,12 @@ enum WebXRSessionFeatures {
     WEBXR_SESSION_FEATURE_HIT_TEST = 4, /** "hit-test" */
 };
 
+/** WebXR 'XRSessionMode' enum*/
+enum WebXRInputPoseMode {
+    WEBXR_INPUT_POSE_GRIP = 0, /** gripSpace */
+    WEBXR_INPUT_POSE_TARGET_RAY = 1, /** targetRaySpace */
+};
+
 /** WebXR rigid transform */
 typedef struct WebXRRigidTransform {
     float matrix[16];
@@ -204,7 +210,7 @@ Get input pose. Can only be called during the frame callback.
 @param outPose Where to store the pose.
 @returns `false` if updating the pose failed, `true` otherwise.
 */
-extern int webxr_get_input_pose(WebXRInputSource* source, WebXRRigidTransform* outPose);
+extern int webxr_get_input_pose(WebXRInputSource* source, WebXRRigidTransform* outPose, WebXRInputPoseMode mode=WEBXR_INPUT_POSE_GRIP);
 
 }
 

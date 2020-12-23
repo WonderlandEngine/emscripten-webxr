@@ -273,7 +273,7 @@ webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
     setValue(outCountPtr, i, 'i32');
 },
 
-webxr_get_input_pose: function(source, outPosePtr) {
+webxr_get_input_pose: function(source, outPosePtr, space) {
     var f = Module['webxr_frame'];
     if(!f) {
         console.warn("Cannot call webxr_get_input_pose outside of frame callback");
@@ -283,7 +283,8 @@ webxr_get_input_pose: function(source, outPosePtr) {
     const id = getValue(source, 'i32');
     const input = Module['webxr_session'].inputSources[id];
 
-    pose = f.getPose(input.gripSpace || input.targetRaySpace, WebXR._coordinateSystem);
+    pose = f.getPose(space == 0 ? input.gripSpace : input.targetRaySpace,
+        WebXR._coordinateSystem);
 
     if(!pose || Number.isNaN(pose.transform.matrix[0])) return false;
 
