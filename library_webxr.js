@@ -131,12 +131,18 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         const modelMatrix = views + SIZE_OF_WEBXR_VIEW*2;
         WebXR._nativize_matrix(modelMatrix, pose.transform.matrix);
 
-        Module.ctx.bindFramebuffer(Module.ctx.FRAMEBUFFER,
-            glLayer.framebuffer);
-        /* HACK: This is not generally necessary, but chrome seems to detect whether the
-         * page is sending frames by waiting for depth buffer clear or something */
-        // TODO still necessary?
-        Module.ctx.clear(Module.ctx.COLOR_BUFFER_BIT|Module.ctx.DEPTH_BUFFER_BIT);
+        /* If framebuffer is non-null, compositor is enabled and we bind it.
+         * If it's null, we need to avoid this call otherwise the canvas FBO is bound */
+        if(glLayer.framebuffer) {
+            /* Make sure that FRAMEBUFFER_BINDING returns a valid value.
+             * For that we create an id in the emscripten object tables
+             * and add the frambuffer */
+            const id = Module.webxr_fbo || GL.getNewId(GL.framebuffers);
+            glLayer.framebuffer.name = id;
+            GL.framebuffers[id] = glLayer.framebuffer;
+            Module.webxr_fbo = id;
+            Module.ctx.bindFramebuffer(Module.ctx.FRAMEBUFFER, glLayer.framebuffer);
+        }
 
         /* Set and reset environment for webxr_get_input_pose calls */
         Module['webxr_frame'] = frame;
