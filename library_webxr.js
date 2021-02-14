@@ -117,7 +117,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         const glLayer = session.renderState.baseLayer;
         pose.views.forEach(function(view) {
             const viewport = glLayer.getViewport(view);
-            let offset = views + SIZE_OF_WEBXR_VIEW*(view.eye == 'left' ? 0 : 1);
+            let offset = views + SIZE_OF_WEBXR_VIEW*(view.eye == 'right' ? 1 : 0);
             offset = WebXR._nativize_rigid_transform(offset, view.transform);
             offset = WebXR._nativize_matrix(offset, view.projectionMatrix);
 
