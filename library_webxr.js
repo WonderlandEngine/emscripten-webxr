@@ -283,14 +283,15 @@ webxr_get_input_pose: function(source, outPosePtr, space) {
     var f = Module['webxr_frame'];
     if(!f) {
         console.warn("Cannot call webxr_get_input_pose outside of frame callback");
-        return;
+        return false;
     }
 
     const id = getValue(source, 'i32');
     const input = Module['webxr_session'].inputSources[id];
 
-    pose = f.getPose(space == 0 ? input.gripSpace : input.targetRaySpace,
-        WebXR._coordinateSystem);
+    const s = space == 0 ? input.gripSpace : input.targetRaySpace;
+    if(!s) return false;
+    const pose = f.getPose(s, WebXR._coordinateSystem);
 
     if(!pose || Number.isNaN(pose.transform.matrix[0])) return false;
 
