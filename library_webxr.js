@@ -267,10 +267,10 @@ webxr_set_select_end_callback: function(callback, userData) {
 },
 
 webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
-    var s = Module['webxr_session'];
+    let s = Module['webxr_session'];
     if(!s) return; // TODO(squareys) warning or return error
 
-    var i = 0;
+    let i = 0;
     for (let inputSource of s.inputSources) {
         if(i >= max) break;
         outArrayPtr = WebXR._nativize_input_source(outArrayPtr, inputSource, i);
@@ -280,7 +280,7 @@ webxr_get_input_sources: function(outArrayPtr, max, outCountPtr) {
 },
 
 webxr_get_input_pose: function(source, outPosePtr, space) {
-    var f = Module['webxr_frame'];
+    let f = Module['webxr_frame'];
     if(!f) {
         console.warn("Cannot call webxr_get_input_pose outside of frame callback");
         return false;
