@@ -55,6 +55,7 @@ $WebXR: {
         return offset;
     },
 
+    _set_input_callback__deps: ['$dynCall'],
     _set_input_callback: function(event, callback, userData) {
         var s = Module['webxr_session'];
         if(!s) return;
@@ -72,6 +73,7 @@ $WebXR: {
         });
     },
 
+    _set_session_callback__deps: ['$dynCall'],
     _set_session_callback: function(event, callback, userData) {
         var s = Module['webxr_session'];
         if(!s) return;
@@ -83,6 +85,7 @@ $WebXR: {
     }
 },
 
+webxr_init__deps: ['$dynCall'],
 webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, errorCallback, userData) {
     function onError(errorCode) {
         if(!errorCallback) return;
@@ -217,6 +220,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
     }
 },
 
+webxr_is_session_supported__deps: ['$dynCall'],
 webxr_is_session_supported: function(mode, callback) {
     if(!navigator.xr) {
         /* WebXR not supported at all */
