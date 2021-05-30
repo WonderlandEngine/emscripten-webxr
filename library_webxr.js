@@ -172,7 +172,9 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         Module.ctx.makeXRCompatible().then(function() {
             // Create the base layer
             session.updateRenderState({
-                baseLayer: new window.XRWebGLLayer(session, Module.ctx)
+                baseLayer: new window.XRWebGLLayer(session, Module.ctx, {
+                    framebufferScaleFactor: Module['webxr_framebuffer_scale_factor']
+                })
             });
 
             session.requestReferenceSpace('local').then(refSpace => {
