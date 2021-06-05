@@ -1,7 +1,7 @@
 var LibraryWebXR = {
 
 $WebXR: {
-    _coordinateSystem: null,
+    refSpaces: {},
     _curRAF: null,
 
     _nativize_vec3: function(offset, vec) {
@@ -114,7 +114,7 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
         /* RAF is set to null on session end to avoid rendering */
         if(Module['webxr_session'] != null) session.requestAnimationFrame(onFrame);
 
-        const pose = frame.getViewerPose(WebXR._coordinateSystem);
+        const pose = frame.getViewerPose(WebXR.refSpaces[WebXR.refSpace]);
         if(!pose) return;
 
         const glLayer = session.renderState.baseLayer;
@@ -177,12 +177,25 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
                 })
             });
 
-            session.requestReferenceSpace('local').then(refSpace => {
-                WebXR._coordinateSystem = refSpace;
+            /* 'viewer' reference space is always available. */
+            session.requestReferenceSpace('viewer').then(refSpace => {
+                WebXR.refSpaces['viewer'] = refSpace;
+
+                WebXR.refSpace = 'viewer';
                 // Start rendering
                 session.requestAnimationFrame(onFrame);
             });
-        }, function(err) {
+
+            /* Request and cache other available spaces, which may not be available */
+            for(const s of ['local', 'local-floor', 'bounded-floor', 'unbounded']) {
+                session.requestReferenceSpace(s).then(refSpace => {
+                    /* We prefer the reference space automatically in above order */
+                    WebXR.refSpace = s;
+
+                    WebXR.refSpaces[s] = refSpace;
+                }, function() { /* Leave refSpaces[s] unset. */ })
+            }
+        }, function() {
             onError(-3);
         });
     };
@@ -297,7 +310,7 @@ webxr_get_input_pose: function(source, outPosePtr, space) {
 
     const s = space == 0 ? input.gripSpace : input.targetRaySpace;
     if(!s) return false;
-    const pose = f.getPose(s, WebXR._coordinateSystem);
+    const pose = f.getPose(s, WebXR.refSpaces[WebXR.refSpace]);
 
     if(!pose || Number.isNaN(pose.transform.matrix[0])) return false;
 
