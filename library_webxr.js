@@ -164,10 +164,6 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
             onSessionEnd(mode);
         });
 
-        // Give application a chance to react to session starting
-        // e.g. finish current desktop frame.
-        onSessionStart(mode);
-
         // Ensure our context can handle WebXR rendering
         Module.ctx.makeXRCompatible().then(function() {
             // Create the base layer
@@ -181,6 +177,11 @@ webxr_init: function(frameCallback, startSessionCallback, endSessionCallback, er
                 WebXR.refSpaces['viewer'] = refSpace;
 
                 WebXR.refSpace = 'viewer';
+
+                // Give application a chance to react to session starting
+                // e.g. finish current desktop frame.
+                onSessionStart(mode);
+
                 // Start rendering
                 session.requestAnimationFrame(onFrame);
             });
