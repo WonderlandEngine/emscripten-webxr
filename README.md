@@ -49,6 +49,8 @@ Projects using Escmripten WebXR
 
  - [Magnum WebXR example](https://github.com/mosra/magnum-examples/blob/master/src/webxr/WebXrExample.cpp) - WebXR example in the Magnum open source C++11/14 OpenGL graphics framework.
  - [Wonderland Engine](https://www.wonderlandengine.com) - Accessible development platform for building highly performant WebXR applications.
+ - [Simple example](https://github.com/GerbenHettinga/WebXR-Emscripten) - Simple example Emscripten application that uses SDL and emscripten-webxr to render a scene.
+
 
 LICENSE
 =======
